@@ -688,6 +688,7 @@ impl Client {
             client_secret: self.client_secret.as_ref(),
             redirect_url: self.redirect_url.as_ref(),
             params: vec![],
+            headers: None,
         }
     }
 }
@@ -709,6 +710,9 @@ impl<'a> ClientRequest<'a> {
         let token_url = self.request.token_url;
 
         let mut request = self.client.request(Method::POST, &token_url.to_string());
+        if let Some(headers) = self.request.headers {
+            request = request.headers(headers);
+        }
 
         // Section 5.1 of RFC 6749 (https://tools.ietf.org/html/rfc6749#section-5.1) only permits
         // JSON responses for this request. Some providers such as GitHub have off-spec behavior
@@ -817,12 +821,20 @@ pub struct Request<'a> {
     redirect_url: Option<&'a Url>,
     /// Extra parameters.
     params: Vec<(Cow<'a, str>, Cow<'a, str>)>,
+    /// Custom headers
+    headers: Option<http::HeaderMap>,
 }
 
 impl<'a> Request<'a> {
     /// Set an additional request param.
     pub fn param(mut self, key: impl Into<Cow<'a, str>>, value: impl Into<Cow<'a, str>>) -> Self {
         self.params.push((key.into(), value.into()));
+        self
+    }
+
+    /// Set request custom headers.
+    pub fn headers(mut self, headers: http::HeaderMap) -> Self {
+        self.headers = Some(headers);
         self
     }
 
